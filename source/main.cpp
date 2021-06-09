@@ -1,5 +1,8 @@
 #include <Windows.h>
 #include <cstdio>
+#include <ctime>
+#include <random>
+#include <vector>
 #include "rasterizer.h"
 
 // https://stackoverflow.com/questions/26005744/how-to-display-pixels-on-screen-directly-from-a-raw-array-of-rgb-values-faster-t
@@ -17,6 +20,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 constexpr int WIDTH = 1200;
 constexpr int HEIGHT = 800;
+
+inline float randomF() {
+    constexpr int scale = 512;
+    float f = (float)(rand() % scale) / scale;
+    return 2.f * (f - .5f);
+}
 
 int main() {
     WNDCLASSEX wc = {
@@ -59,14 +68,29 @@ int main() {
 
     // TODO: allow resizing
     HDC hDC = GetDC(hWnd);
-    BITMAP bitmap{};
+    BITMAP bitmap {};
     HGDIOBJ hBitmap = GetCurrentObject(hDC, OBJ_BITMAP);
     GetObject(hBitmap, sizeof(BITMAP), &bitmap);
 
     rs::initialize();
     rs::createCanvas(bitmap.bmWidth, bitmap.bmHeight);
 
-    MSG msg{};
+    // setup random triangles
+    std::srand(std::time(nullptr));
+    constexpr float s = .5f;
+    constexpr int trangleCnt = 100;
+    std::vector<float> points;
+    for (int i = 0; i < trangleCnt; ++i) {
+        points.push_back(randomF());
+        points.push_back(randomF());
+        points.push_back(randomF());
+        points.push_back(randomF());
+        points.push_back(randomF());
+        points.push_back(randomF());
+    }
+    rs::setVertexArray(0, points.data(), 2);
+
+    MSG msg {};
     while (msg.message != WM_QUIT) {
         if (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
             ::TranslateMessage(&msg);
@@ -74,10 +98,10 @@ int main() {
             continue;
         }
 
-        // static int c = 0;
-        // rs::clearColor(c, c, c, 255);
+        ////// render code begin
         rs::clear(rs::ColorBufferBit);
-        rs::drawTriangle(glm::vec2(-.5f, -.5f), glm::vec2(.0f, .5f), glm::vec2(.5f, -.5f));
+        rs::drawTriangles(trangleCnt);
+        ////// render code end
 
         // Creating temp bitmap
         HBITMAP map = CreateBitmap(bitmap.bmWidth,       // width. 512 in my case

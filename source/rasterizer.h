@@ -18,6 +18,8 @@ void* getCanvasRaw();
 void clearColor(int r, int g, int b, int a);
 void clear(int flag);
 
-void drawTriangle(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3);
+void setVertexArray(int slot, float* data, int comp);
+
+void drawTriangles(int count);
 
 }  // namespace rs

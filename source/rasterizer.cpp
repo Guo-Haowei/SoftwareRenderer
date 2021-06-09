@@ -1,18 +1,30 @@
 #include "rasterizer.h"
 #include <cassert>
 #include <cstdlib>
+// TODO: remove
+#include <random>
 
 namespace rs {
 
 struct Rasterizer {
+    static constexpr size_t MAX_ATTRIB = 8;
+
+    // TODO: pack to uint32_t
     struct ClearColor {
         char r, g, b, a;
     };
 
-    ClearColor clearColor = {0, 0, 0, 0};
+    struct Attrib {
+        float* data;
+        int component;
+    };
+
+    ClearColor clearColor = { 0, 0, 0, 0 };
     int width = 0;
     int height = 0;
     char* colorBuffer = nullptr;
+
+    Attrib vsInput[MAX_ATTRIB];
 };
 
 static Rasterizer g_rasterizer;
@@ -64,6 +76,12 @@ void clear(int flag) {
     }
 }
 
+void setVertexArray(int slot, float* data, int comp) {
+    assert(slot >= 0 && slot < Rasterizer::MAX_ATTRIB);
+    g_rasterizer.vsInput[slot].data = data;
+    g_rasterizer.vsInput[slot].component = comp;
+}
+
 using glm::vec2;
 using glm::vec3;
 /**
@@ -88,35 +106,48 @@ static vec3 barycentric(const vec2& a, const vec2& b, const vec2& c, const vec2&
     return uvw;
 }
 
-void drawTriangle(vec2 p1, vec2 p2, vec2 p3) {
+void drawTriangles(int count) {
+    // void drawTriangle(vec2 p1, vec2 p2, vec2 p3) {
     assert(g_rasterizer.width > 0 && g_rasterizer.height > 0);
 
-    p1 = .5f * p1 + .5f;
-    p2 = .5f * p2 + .5f;
-    p3 = .5f * p3 + .5f;
+    // hack
+    const float* p = g_rasterizer.vsInput[0].data;
+    const int comp = g_rasterizer.vsInput[0].component;
+    for (int i = 0; i < count; ++i) {
+        vec2 p1(p[i * 3 + 0], p[i * 3 + 1]);
+        vec2 p2(p[i * 3 + 2], p[i * 3 + 3]);
+        vec2 p3(p[i * 3 + 4], p[i * 3 + 5]);
+        p1 = .5f * p1 + .5f;
+        p2 = .5f * p2 + .5f;
+        p3 = .5f * p3 + .5f;
 
-    const int width = g_rasterizer.width, height = g_rasterizer.height;
-    const int minX = 0, minY = 0;
-    const int maxX = width, maxY = height;
+        const int width = g_rasterizer.width, height = g_rasterizer.height;
+        const int minX = 0, minY = 0;
+        const int maxX = width, maxY = height;
 
-    const vec2 a(p1.x * width, p1.y * height);
-    const vec2 b(p2.x * width, p2.y * height);
-    const vec2 c(p3.x * width, p3.y * height);
+        const vec2 a(p1.x * width, p1.y * height);
+        const vec2 b(p2.x * width, p2.y * height);
+        const vec2 c(p3.x * width, p3.y * height);
 
-    for (int y = minY; y < maxY; ++y) {
-        for (int x = minX; x < maxX; ++x) {
-            vec3 bCoord = barycentric(a, b, c, vec2(x, y));
-            float sum = bCoord.x + bCoord.y + bCoord.z;
-            // TODO: refactor
-            static const float epsilon = 0.00003f;
-            bool test = (bCoord.x >= 0.0f && bCoord.y >= 0.0f && bCoord.z >= 0.0f && glm::abs(sum - 1.0f) <= epsilon);
-            if (test == true) {
-                // depth test
-                const int index = y * g_rasterizer.width + x;
-                g_rasterizer.colorBuffer[4 * index + 0] = static_cast<char>(255);
-                g_rasterizer.colorBuffer[4 * index + 1] = static_cast<char>(255);
-                g_rasterizer.colorBuffer[4 * index + 2] = static_cast<char>(255);
-                g_rasterizer.colorBuffer[4 * index + 3] = static_cast<char>(255);
+        int ir = rand() % 255;
+        int ig = rand() % 255;
+        int ib = rand() % 255;
+
+        for (int y = minY; y < maxY; ++y) {
+            for (int x = minX; x < maxX; ++x) {
+                vec3 bCoord = barycentric(a, b, c, vec2(x, y));
+                float sum = bCoord.x + bCoord.y + bCoord.z;
+                // TODO: refactor
+                static const float epsilon = 0.00003f;
+                bool test = (bCoord.x >= 0.0f && bCoord.y >= 0.0f && bCoord.z >= 0.0f && glm::abs(sum - 1.0f) <= epsilon);
+                if (test == true) {
+                    // depth test
+                    const int index = y * g_rasterizer.width + x;
+                    g_rasterizer.colorBuffer[4 * index + 0] = static_cast<char>(ir);
+                    g_rasterizer.colorBuffer[4 * index + 1] = static_cast<char>(ig);
+                    g_rasterizer.colorBuffer[4 * index + 2] = static_cast<char>(ib);
+                    g_rasterizer.colorBuffer[4 * index + 3] = static_cast<char>(255);
+                }
             }
         }
     }
