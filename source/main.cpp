@@ -74,10 +74,10 @@ int main() {
             continue;
         }
 
-        static int c = 0;
-        rs::clearColor(c, c, c, 255);
+        // static int c = 0;
+        // rs::clearColor(c, c, c, 255);
         rs::clear(rs::ColorBufferBit);
-        ++c;
+        rs::drawTriangle(glm::vec2(-.5f, -.5f), glm::vec2(.0f, .5f), glm::vec2(.5f, -.5f));
 
         // Creating temp bitmap
         HBITMAP map = CreateBitmap(bitmap.bmWidth,       // width. 512 in my case
